@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.specter.elearning.controller.CourseListController">
+    <top>
+        <ToolBar>
+            <Label text="Courses" styleClass="title-small"/>
+            <Pane HBox.hgrow="ALWAYS"/>
+            <Button text="Back" fx:id="btnBack"/>
+        </ToolBar>
+    </top>
+    <center>
+        <ListView fx:id="allCourses" />
+    </center>
+    <bottom>
+        <Button fx:id="btnOpenCourse" text="Open Course" maxWidth="Infinity"/>
+    </bottom>
+</BorderPane>

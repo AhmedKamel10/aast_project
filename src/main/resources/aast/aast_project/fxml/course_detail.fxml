@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.specter.elearning.controller.CourseDetailController">
+    <top>
+        <ToolBar>
+            <Label text="Course Detail" styleClass="title-small"/>
+            <Pane HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnBack" text="Back"/>
+            <Button fx:id="btnEditCourse" text="Edit"/>
+        </ToolBar>
+    </top>
+    <center>
+        <SplitPane>
+            <VBox spacing="8" prefWidth="300" padding="10">
+                <Label text="Lectures"/>
+                <ListView fx:id="lecturesList"/>
+                <Label text="Quizzes"/>
+                <ListView fx:id="quizzesList"/>
+            </VBox>
+            <StackPane>
+                <Label text="Select a lecture or quiz to view content" wrapText="true"/>
+            </StackPane>
+        </SplitPane>
+    </center>
+    <bottom>
+        <Button fx:id="btnTakeQuiz" text="Take Selected Quiz" maxWidth="Infinity"/>
+    </bottom>
+</BorderPane>

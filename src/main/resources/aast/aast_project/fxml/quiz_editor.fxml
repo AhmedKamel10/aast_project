@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="8" xmlns:fx="http://javafx.com/fxml" fx:controller="com.specter.elearning.controller.QuizEditorController" padding="12">
+    <Label text="Create / Edit Quiz" styleClass="title-small"/>
+    <TextField fx:id="quizTitle" promptText="Quiz title"/>
+    <TableView fx:id="questionsTable" prefHeight="300"/>
+    <HBox spacing="8">
+        <Button fx:id="btnAddQuestion" text="Add Question"/>
+        <Button fx:id="btnSave" text="Save Quiz"/>
+        <Button fx:id="btnCancel" text="Cancel"/>
+    </HBox>
+</VBox>

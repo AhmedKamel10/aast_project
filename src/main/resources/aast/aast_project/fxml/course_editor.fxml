@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="8" xmlns:fx="http://javafx.com/fxml" fx:controller="com.specter.elearning.controller.CourseEditorController" padding="12">
+    <Label text="Create / Edit Course" styleClass="title-small"/>
+    <TextField fx:id="titleField" promptText="Course title"/>
+    <TextArea fx:id="descriptionArea" promptText="Description" prefRowCount="8"/>
+    <HBox spacing="8">
+        <Button fx:id="btnSave" text="Save"/>
+        <Button fx:id="btnCancel" text="Cancel"/>
+    </HBox>
+</VBox>

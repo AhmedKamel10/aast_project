@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.specter.elearning.controller.QuizTakeController" spacing="12" padding="12">
+    <Label fx:id="questionLabel" wrapText="true"/>
+    <VBox spacing="8">
+        <RadioButton fx:id="optA" />
+        <RadioButton fx:id="optB" />
+        <RadioButton fx:id="optC" />
+        <RadioButton fx:id="optD" />
+    </VBox>
+    <HBox spacing="8">
+        <Button fx:id="btnNext" text="Next"/>
+        <Button fx:id="btnFinish" text="Finish"/>
+    </HBox>
+</VBox>

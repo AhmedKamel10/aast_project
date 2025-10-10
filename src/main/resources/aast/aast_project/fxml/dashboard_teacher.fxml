@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.specter.elearning.controller.DashboardTeacherController">
+    <top>
+        <ToolBar>
+            <Label text="Teacher Dashboard" styleClass="title-small"/>
+            <Pane HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnProfile" text="Profile"/>
+            <Button fx:id="btnLogout" text="Logout"/>
+        </ToolBar>
+    </top>
+
+    <center>
+        <VBox spacing="8">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <Label text="Your Courses"/>
+            <ListView fx:id="authoredCourses" prefHeight="400"/>
+
+            <HBox spacing="8">
+                <Button fx:id="btnCreateCourse" text="Create Course"/>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="aast.aast_project.controllers.StudentDashboardController">
+
+    <!-- 🔹 Top Bar -->
+    <top>
+        <HBox spacing="10" style="-fx-background-color: #2C3E50; -fx-padding: 10;">
+            <Label text="Student Dashboard" style="-fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Logout" fx:id="logoutButton" style="-fx-background-color: #E74C3C; -fx-text-fill: white;"/>
+        </HBox>
+    </top>
+
+    <!-- 🔹 Left Sidebar -->
+    <left>
+        <VBox spacing="15" style="-fx-background-color: #34495E; -fx-padding: 20;">
+            <Label text="Navigation" style="-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+            <Button text="My Courses" fx:id="coursesButton"
+                    style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
+
+            <Button text="Assignments" fx:id="assignmentsButton"
+                    style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
+
+            <Button text="Grades" fx:id="gradesButton"
+                    style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
+
+            <Button text="Profile" fx:id="profileButton"
+                    style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
+        </VBox>
+    </left>
+
+    <!-- 🔹 Main Content Area -->
+    <center>
+        <VBox spacing="15" alignment="TOP_CENTER" style="-fx-padding: 20;">
+            <Label text="Welcome, Student!" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+
+            <TextArea fx:id="infoArea" prefHeight="400" prefWidth="500"
+                      promptText="Your courses, assignments, and announcements will appear here..."/>
+        </VBox>
+    </center>
+
+</BorderPane>
