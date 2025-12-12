@@ -1,32 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
-<?import java.lang.String?>
-<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="aast.aast_project.controller.LoginController" styleClass="background-pane">
-    <stylesheets>
-        <String fx:value="/com/specter/elearning/css/style.css"/>
-    </stylesheets>
-    <children>
-        <VBox spacing="15.0" alignment="CENTER" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0" AnchorPane.topAnchor="50" AnchorPane.bottomAnchor="50" styleClass="content-pane">
-            <Label text="E-Learning" styleClass="title"/>
+<AnchorPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="aast.aast_project.controller.LoginController"
+            style="-fx-background-color: #F4F7FA;"> <children>
+    <VBox fx:id="loginCard"
+          spacing="20.0"
+          alignment="CENTER"
+          AnchorPane.leftAnchor="0"
+          AnchorPane.rightAnchor="0"
+          AnchorPane.topAnchor="100"
+          AnchorPane.bottomAnchor="100"
+          maxWidth="400"
+          style="-fx-background-color: white;
+                     -fx-border-radius: 12px;
+                     -fx-background-radius: 12px;
+                     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 20, 0.5, 0, 4);"> <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
 
-            <TextField fx:id="usernameField" promptText="Username" maxWidth="300"/>
-            <PasswordField fx:id="passwordField" promptText="Password" maxWidth="300"/>
+        <Label text="E-LEARNING PORTAL" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #333333;"/>
+        <Label text="Sign in to your account" style="-fx-font-size: 14px; -fx-text-fill: #777777;"/>
 
-            <HBox spacing="10" alignment="CENTER" maxWidth="300">
-                <Label text="Register as:"/>
-                <ChoiceBox fx:id="roleChoiceBox" prefWidth="150">
-                </ChoiceBox>
-            </HBox>
+        <Separator maxWidth="300" style="-fx-padding: 10 0 0 0;"/>
 
-            <HBox spacing="20" alignment="CENTER">
-                <Button fx:id="loginButton" text="Login" styleClass="primary-button"/>
-                <Button fx:id="registerButton" text="Register" styleClass="secondary-button"/>
-            </HBox>
-
-            <Label fx:id="messageLabel" wrapText="true" styleClass="message-label"/>
+        <VBox spacing="15" maxWidth="300">
+            <TextField fx:id="usernameField" promptText="Username" style="-fx-background-color: #F8F8F8; -fx-border-color: #E0E0E0; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-padding: 10;"/>
+            <PasswordField fx:id="passwordField" promptText="Password" style="-fx-background-color: #F8F8F8; -fx-border-color: #E0E0E0; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-padding: 10;"/>
         </VBox>
-    </children>
+
+        <HBox spacing="10" alignment="CENTER" maxWidth="300">
+            <Label text="I am signing in as:" style="-fx-font-size: 13px; -fx-text-fill: #555555;"/>
+            <ChoiceBox fx:id="roleChoiceBox" prefWidth="150" HBox.hgrow="ALWAYS" style="-fx-background-color: #F8F8F8; -fx-border-color: #E0E0E0; -fx-border-radius: 5px; -fx-background-radius: 5px;"/>
+        </HBox>
+
+        <VBox spacing="10" alignment="CENTER" maxWidth="300">
+            <Button fx:id="loginButton" text="Login" styleClass="primary-button" prefWidth="300"/>
+            <Button fx:id="registerButton" text="New User? Register" styleClass="secondary-button" prefWidth="300"/>
+        </VBox>
+
+        <Label fx:id="messageLabel" wrapText="true" styleClass="message-label" maxWidth="300" textAlignment="CENTER"/>
+    </VBox>
+</children>
 </AnchorPane>

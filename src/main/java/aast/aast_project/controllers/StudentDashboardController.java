@@ -22,7 +22,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime; // Added for grade display
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +36,7 @@ public class StudentDashboardController {
     @FXML private Button logoutButton;
     @FXML private Button coursesButton;
     @FXML private Button assignmentsButton;
-    @FXML private Button gradesButton; // <-- NEW: Add this to your FXML for the menu/shortcut
+    @FXML private Button gradesButton;
 
     // ===============================================
     // STATE
@@ -44,32 +44,73 @@ public class StudentDashboardController {
     private int studentId;
 
     // ===============================================
-    // DTO for Grade Display (NEW)
+    // DTO for Grade Display (UPDATED)
     // ===============================================
+
+    // DTO for detailed assignment/quiz grade
     public static class StudentGrade {
         String courseName;
         String assignmentTitle;
-        Float score; // Can be NULL
+        Float score; // Earned score
+        int maxGrade; // Max possible score (NEW)
         String feedback;
         LocalDateTime submissionDate;
 
-        public StudentGrade(String courseName, String assignmentTitle, Float score, String feedback, LocalDateTime submissionDate) {
+        public StudentGrade(String courseName, String assignmentTitle, Float score, int maxGrade, String feedback, LocalDateTime submissionDate) {
             this.courseName = courseName;
             this.assignmentTitle = assignmentTitle;
             this.score = score;
+            this.maxGrade = maxGrade;
             this.feedback = feedback;
             this.submissionDate = submissionDate;
         }
 
         public String getCourseName() { return courseName; }
         public String getAssignmentTitle() { return assignmentTitle; }
+
+        // Updated to display X / Y (Max Grade)
         public String getScoreDisplay() {
-            return (score == null) ? "N/A (Ungraded)" : String.format("%.1f / 100", score);
+            return (score == null) ? "N/A (Ungraded)" : String.format("%.1f / %d", score, maxGrade);
+        }
+    }
+
+    // NEW DTO for Course Summary View
+    public static class CourseSummaryGrade {
+        int courseId;
+        String courseName;
+        Float totalEarnedScore;
+        Float totalMaxScore;
+
+        public CourseSummaryGrade(int courseId, String courseName, Float totalEarnedScore, Float totalMaxScore) {
+            this.courseId = courseId;
+            this.courseName = courseName;
+            this.totalEarnedScore = totalEarnedScore;
+            this.totalMaxScore = totalMaxScore;
+        }
+
+        public int getCourseId() { return courseId; }
+        public String getCourseName() { return courseName; }
+
+        public String getScoreDisplay() {
+            if (totalMaxScore == null || totalMaxScore == 0.0f) {
+                return "N/A (No Graded Items)";
+            }
+            float percentage = (totalEarnedScore / totalMaxScore) * 100.0f;
+
+            // Display accumulated score and the percentage
+            return String.format("%.1f / %.1f (%.1f%%)", totalEarnedScore, totalMaxScore, percentage);
+        }
+
+        public float getPercentageScore() {
+            if (totalMaxScore == null || totalMaxScore == 0.0f) {
+                return 0.0f;
+            }
+            return (totalEarnedScore / totalMaxScore) * 100.0f;
         }
     }
 
     // ===============================================
-    // SQL QUERIES
+    // SQL QUERIES (UPDATED)
     // ===============================================
     private static final String SELECT_ALL_COURSES =
             "SELECT id, string_id, string_courseName, string_description FROM Course";
@@ -95,15 +136,27 @@ public class StudentDashboardController {
     private static final String SUBMIT_ASSIGNMENT =
             "INSERT INTO Submission (student_id, assignment_id, string_filePath, datetime_submissionDate) VALUES (?, ?, ?, NOW())";
 
-    // NEW: Query to fetch student's submissions and grades
-    private static final String SELECT_STUDENT_GRADES =
+    // NEW: Query to calculate the accumulated score (out of accumulated max grade) for a course
+    private static final String SELECT_COURSE_ACCUMULATED_SUMMARY =
+            "SELECT C.id AS courseId, C.string_courseName, " +
+                    "SUM(S.float_score) AS total_earned_score, " +
+                    "SUM(A.int_maxGrade) AS total_max_score " +
+                    "FROM Course C " +
+                    "JOIN Lesson L ON L.course_id = C.id " +
+                    "JOIN Assignment A ON A.lesson_id = L.id " +
+                    "JOIN Submission S ON S.assignment_id = A.id " +
+                    "WHERE S.student_id = ? AND S.float_score IS NOT NULL " +
+                    "GROUP BY C.id, C.string_courseName";
+
+    // NEW: Query to load detailed grades for a specific course (includes max grade)
+    private static final String SELECT_DETAILED_GRADES_BY_COURSE =
             "SELECT C.string_courseName, A.string_title AS assignmentTitle, " +
-                    "S.float_score, S.string_feedback, S.datetime_submissionDate " +
+                    "A.int_maxGrade, S.float_score, S.string_feedback, S.datetime_submissionDate " +
                     "FROM Submission S " +
                     "JOIN Assignment A ON S.assignment_id = A.id " +
                     "JOIN Lesson L ON A.lesson_id = L.id " +
                     "JOIN Course C ON L.course_id = C.id " +
-                    "WHERE S.student_id = ?";
+                    "WHERE S.student_id = ? AND C.id = ?";
 
 
     // =========================================================================
@@ -121,7 +174,6 @@ public class StudentDashboardController {
         logoutButton.setOnAction(e -> ViewManager.showLogin());
         coursesButton.setOnAction(e -> handleMyCourses());
         assignmentsButton.setOnAction(e -> handleAssignments());
-        // Check for the new button before setting the action
         if (gradesButton != null) {
             gradesButton.setOnAction(e -> handleViewGrades());
         }
@@ -130,13 +182,12 @@ public class StudentDashboardController {
     }
 
     private void setCenterContent(javafx.scene.Node content) {
-        // Use lookup to find the center VBox, as it doesn't have an @FXML field in this controller
         if (coursesButton != null) {
             Node centerNode = coursesButton.getScene().lookup("#centerVBox");
             if (centerNode instanceof VBox parentVBox) {
                 parentVBox.getChildren().clear();
                 parentVBox.getChildren().add(content);
-                VBox.setVgrow(content, Priority.ALWAYS); // Ensure content expands
+                VBox.setVgrow(content, Priority.ALWAYS);
             } else {
                 System.err.println("Error: Could not find center content container. Please ensure the center VBox has fx:id=\"centerVBox\".");
             }
@@ -202,13 +253,239 @@ public class StudentDashboardController {
     // NEW HANDLER: For viewing grades
     @FXML
     private void handleViewGrades() {
-        showStudentGrades();
+        showCourseSummaryGrades();
     }
 
 
     // =========================================================================
-    // COURSES LOGIC (Existing Methods)
+    // GRADING LOGIC (UPDATED SECTION FOR SUMMARY/DETAIL VIEW)
     // =========================================================================
+
+    /**
+     * Loads the student's overall grades per course and displays the summary.
+     */
+    private void showCourseSummaryGrades() {
+        VBox contentBox = new VBox(15);
+        contentBox.setPadding(new Insets(20));
+
+        Label header = new Label("Course Final Grades");
+        header.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;");
+        contentBox.getChildren().add(header);
+
+        List<CourseSummaryGrade> summaries = loadCourseSummaryGrades();
+
+        if (summaries.isEmpty()) {
+            contentBox.getChildren().add(new Label("No graded assignments found in your enrolled courses."));
+        } else {
+            for (CourseSummaryGrade summary : summaries) {
+                HBox summaryRow = createSummaryGradeRow(summary);
+                contentBox.getChildren().add(summaryRow);
+            }
+        }
+        setCenterContent(contentBox);
+    }
+
+    /**
+     * Executes the SQL query to calculate the accumulated score for each course.
+     */
+    private List<CourseSummaryGrade> loadCourseSummaryGrades() {
+        List<CourseSummaryGrade> summaries = new ArrayList<>();
+        if (studentId <= 0) return summaries;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             // Use the new accumulated summary query
+             PreparedStatement pstmt = conn.prepareStatement(SELECT_COURSE_ACCUMULATED_SUMMARY)) {
+
+            pstmt.setInt(1, studentId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    // Fetch the two new summed columns
+                    Float totalEarnedScore = rs.getObject("total_earned_score", Float.class);
+                    Float totalMaxScore = rs.getObject("total_max_score", Float.class);
+
+                    summaries.add(new CourseSummaryGrade(
+                            rs.getInt("courseId"),
+                            rs.getString("string_courseName"),
+                            totalEarnedScore,
+                            totalMaxScore
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            showAlert("Database Error", "Failed to load course summary grades: " + e.getMessage(), AlertType.ERROR);
+            e.printStackTrace();
+        }
+        return summaries;
+    }
+
+    /**
+     * Creates the HBox row for the overall course grade summary, including the progress bar.
+     */
+    private HBox createSummaryGradeRow(CourseSummaryGrade summary) {
+        Label courseLabel = new Label("📚 " + summary.getCourseName());
+        courseLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
+
+        // Calculate progress bar value and color
+        float percentage = summary.getPercentageScore();
+        String color;
+        double progress = percentage / 100.0;
+
+        if (progress == 0.0f && summary.totalMaxScore == null) {
+            color = "#7F8C8D"; // Grey for no graded items
+        } else if (percentage >= 90) {
+            color = "#2ECC71"; // Green (A)
+        } else if (percentage >= 80) {
+            color = "#3498DB"; // Blue (B)
+        } else if (percentage >= 70) {
+            color = "#F39C12"; // Orange (C)
+        } else {
+            color = "#C0392B"; // Red (F)
+        }
+
+        // 1. Progress Bar (Visual Indicator)
+        ProgressBar progressBar = new ProgressBar(progress);
+        progressBar.setPrefWidth(200);
+        progressBar.setPrefHeight(15);
+        // Custom style for progress color (Note: This might require external CSS for full control in some environments)
+        // For simplicity, we use the accent color approach which often works.
+        progressBar.setStyle("-fx-accent: " + color + ";");
+
+        // 2. Course Details Box (Name + Progress Bar)
+        VBox detailsBox = new VBox(5, courseLabel, progressBar);
+        VBox.setVgrow(detailsBox, Priority.ALWAYS);
+
+        // 3. Score Label (Text Indicator: X / Y (Z%))
+        Label scoreLabel = new Label(summary.getScoreDisplay());
+        scoreLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: " + color + "; -fx-font-weight: bold;");
+
+        // 4. Details Button
+        Button detailsButton = new Button("View Details");
+        detailsButton.setOnAction(e -> showDetailedGradesForCourse(summary));
+        detailsButton.setStyle("-fx-background-color: #3498DB; -fx-text-fill: white;");
+
+        HBox row = new HBox(20);
+        row.setPadding(new Insets(15));
+        row.setStyle("-fx-border-color: #DDD; -fx-border-width: 0 0 1 0; -fx-background-color: #F8F8F8;");
+
+        // Layout: Details Box (Name + Bar) | Spacer | Score | Button
+        row.getChildren().addAll(detailsBox, new Region(), scoreLabel, detailsButton);
+        HBox.setHgrow(row.getChildren().get(1), Priority.ALWAYS);
+
+        return row;
+    }
+
+    /**
+     * Shows a dialog with the detailed assignment grades for a specific course.
+     */
+    private void showDetailedGradesForCourse(CourseSummaryGrade summary) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Detailed Grades");
+        dialog.setHeaderText("Assignments and Quizzes for: " + summary.getCourseName());
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
+
+        VBox detailLayout = new VBox(10);
+        detailLayout.setPadding(new Insets(15));
+
+        // Header for the score
+        Label summaryHeader = new Label("Overall Course Grade: " + summary.getScoreDisplay());
+        summaryHeader.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-padding: 0 0 10 0;");
+        detailLayout.getChildren().add(summaryHeader);
+
+        // --- Load Details ---
+        List<StudentGrade> detailedGrades = loadDetailedGradesByCourse(summary.getCourseId());
+
+        if (detailedGrades.isEmpty()) {
+            detailLayout.getChildren().add(new Label("No submissions found for this course."));
+        } else {
+            // Create headers for the list
+            HBox detailHeader = new HBox(50, new Label("Assignment Title"), new Region(), new Label("Score (Earned/Max)"));
+            detailHeader.setStyle("-fx-font-weight: bold; -fx-padding: 5 0; -fx-border-width: 0 0 2 0; -fx-border-color: #AAA;");
+            HBox.setHgrow(detailHeader.getChildren().get(1), Priority.ALWAYS);
+            detailLayout.getChildren().add(detailHeader);
+
+            for (StudentGrade grade : detailedGrades) {
+                HBox detailRow = createDetailedGradeRow(grade);
+                detailLayout.getChildren().add(detailRow);
+            }
+        }
+
+        dialog.getDialogPane().setContent(detailLayout);
+        dialog.getDialogPane().setPrefWidth(650);
+        dialog.getDialogPane().setPrefHeight(600);
+        dialog.showAndWait();
+    }
+
+    /**
+     * Executes a query to load all submission details (grades, feedback, maxGrade) for a specific course.
+     */
+    private List<StudentGrade> loadDetailedGradesByCourse(int courseId) {
+        List<StudentGrade> grades = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(SELECT_DETAILED_GRADES_BY_COURSE)) {
+
+            pstmt.setInt(1, studentId);
+            pstmt.setInt(2, courseId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Float score = rs.getObject("float_score", Float.class);
+                    LocalDateTime submissionDate = rs.getTimestamp("datetime_submissionDate").toLocalDateTime();
+                    int maxGrade = rs.getInt("int_maxGrade"); // NEW: Fetch max grade
+
+                    grades.add(new StudentGrade(
+                            rs.getString("string_courseName"),
+                            rs.getString("assignmentTitle"),
+                            score,
+                            maxGrade, // Pass max grade
+                            rs.getString("string_feedback"),
+                            submissionDate
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to load detailed grades: " + e.getMessage());
+        }
+        return grades;
+    }
+
+    /**
+     * Creates the HBox row for an individual assignment detail (used in the dialog).
+     */
+    private HBox createDetailedGradeRow(StudentGrade grade) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+
+        Label assignmentLabel = new Label("📝 " + grade.getAssignmentTitle());
+        assignmentLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
+        Label scoreLabel = new Label(grade.getScoreDisplay());
+        scoreLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: " + (grade.score == null ? "#FFC300" : "#2ECC71") + "; -fx-font-weight: bold;");
+
+        VBox detailsBox = new VBox(5,
+                assignmentLabel,
+                new Label("Submitted: " + grade.submissionDate.format(formatter))
+        );
+
+        Button viewDetailsButton = new Button("View Feedback");
+        viewDetailsButton.setOnAction(e -> showFeedbackDialog(grade));
+
+        HBox row = new HBox(20);
+        row.setPadding(new Insets(10));
+        row.setStyle("-fx-border-color: #EEE; -fx-border-width: 0 0 1 0; -fx-background-color: #FFFFFF;");
+
+        // Layout: Details (left) | Spacer | Score (center) | Button (right)
+        HBox.setHgrow(detailsBox, Priority.ALWAYS);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS); // Push elements apart
+
+        row.getChildren().addAll(detailsBox, spacer, scoreLabel, viewDetailsButton);
+
+        return row;
+    }
+
+    // ... (All existing methods like createCourseRow, handleEnrollment,
+    // showLessonsForCourse, showSubmissionDialog, showAlert, etc., remain unchanged) ...
+
 
     private HBox createCourseRow(Course course, boolean isEnrolled) {
         Label nameLabel = new Label(course.getCourseIdString() + " - " + course.getCourseName());
@@ -309,15 +586,7 @@ public class StudentDashboardController {
         }
     }
 
-    // ... (All existing Lesson and Assignment logic methods remain here) ...
-    // ... (You should keep all the original methods like loadLessonsForCourse, showLectureDetails, showAssignmentDetails, etc.) ...
-
-    // =========================================================================
-    // SUBMISSION LOGIC (Existing Method)
-    // =========================================================================
-
     private void handleSubmission(int assignmentId, String filePath) {
-        // Check if the file path is empty before attempting submission
         if (filePath == null || filePath.trim().isEmpty()) {
             showAlert("Submission Failed", "Please select a valid file path.", AlertType.WARNING);
             return;
@@ -338,10 +607,6 @@ public class StudentDashboardController {
             showAlert("Database Error", "Failed to submit assignment: " + e.getMessage(), AlertType.ERROR);
         }
     }
-
-    // =========================================================================
-    // LECTURES (LESSONS) LOGIC (Existing Methods)
-    // =========================================================================
 
     private void showLessonsForCourse(Course course) {
         VBox contentBox = new VBox(15);
@@ -396,6 +661,7 @@ public class StudentDashboardController {
                     pstmtCheckAssignment.setInt(1, lesson.getId());
                     try (ResultSet rsCheck = pstmtCheckAssignment.executeQuery()) {
                         if (rsCheck.next() && rsCheck.getInt(1) > 0) {
+
                             lesson.setContentType("Assignment");
                         } else {
                             lesson.setContentType("Lecture");
@@ -603,123 +869,6 @@ public class StudentDashboardController {
         return row;
     }
 
-    // =========================================================================
-    // GRADING LOGIC (NEW SECTION)
-    // =========================================================================
-
-    /**
-     * Loads the student's grades and displays them in the center VBox.
-     */
-    private void showStudentGrades() {
-        VBox contentBox = new VBox(15);
-        contentBox.setPadding(new Insets(20));
-
-        Label header = new Label("My Grades and Feedback");
-        header.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;");
-        contentBox.getChildren().add(header);
-
-        List<StudentGrade> grades = loadStudentGrades();
-
-        if (grades.isEmpty()) {
-            contentBox.getChildren().add(new Label("You have not submitted any assignments yet."));
-        } else {
-            for (StudentGrade grade : grades) {
-                HBox gradeRow = createGradeRow(grade);
-                contentBox.getChildren().add(gradeRow);
-            }
-        }
-        setCenterContent(contentBox);
-    }
-
-    private List<StudentGrade> loadStudentGrades() {
-        List<StudentGrade> grades = new ArrayList<>();
-        if (studentId <= 0) return grades;
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(SELECT_STUDENT_GRADES)) {
-
-            pstmt.setInt(1, studentId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    // GetObject is safe for nullable floats
-                    Float score = rs.getObject("float_score", Float.class);
-                    LocalDateTime submissionDate = rs.getTimestamp("datetime_submissionDate").toLocalDateTime();
-
-                    grades.add(new StudentGrade(
-                            rs.getString("string_courseName"),
-                            rs.getString("assignmentTitle"),
-                            score,
-                            rs.getString("string_feedback"),
-                            submissionDate
-                    ));
-                }
-            }
-        } catch (SQLException e) {
-            showAlert("Database Error", "Failed to load student grades: " + e.getMessage(), AlertType.ERROR);
-            e.printStackTrace();
-        }
-        return grades;
-    }
-
-    private HBox createGradeRow(StudentGrade grade) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-
-        Label assignmentLabel = new Label(grade.getAssignmentTitle());
-        assignmentLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
-
-        Label scoreLabel = new Label(grade.getScoreDisplay());
-        scoreLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: " + (grade.score == null ? "#FFC300" : "#2ECC71") + "; -fx-font-weight: bold;");
-
-        VBox detailsBox = new VBox(5,
-                new Label("Course: " + grade.getCourseName()),
-                assignmentLabel,
-                new Label("Submitted: " + grade.submissionDate.format(formatter))
-        );
-
-        Button viewDetailsButton = new Button("View Feedback");
-        viewDetailsButton.setOnAction(e -> showFeedbackDialog(grade));
-
-        HBox row = new HBox(20);
-        row.setPadding(new Insets(10));
-        row.setStyle("-fx-border-color: #EEE; -fx-border-width: 0 0 1 0; -fx-background-color: #FFFFFF;");
-
-        // Layout: Details (left) | Score (center) | Button (right)
-        HBox.setHgrow(detailsBox, Priority.ALWAYS);
-        row.getChildren().addAll(detailsBox, scoreLabel, viewDetailsButton);
-
-        return row;
-    }
-
-    private void showFeedbackDialog(StudentGrade grade) {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Assignment Feedback");
-        dialog.setHeaderText(grade.getAssignmentTitle() + " in " + grade.getCourseName());
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
-
-        VBox layout = new VBox(10);
-        layout.setPadding(new Insets(10));
-
-        Label scoreHeader = new Label("Final Score:");
-        scoreHeader.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
-
-        Label scoreValue = new Label(grade.getScoreDisplay());
-        scoreValue.setStyle("-fx-font-size: 20px; -fx-text-fill: " + (grade.score == null ? "#FFC300" : "#2ECC71") + "; -fx-font-weight: bold;");
-
-        String feedbackText = (grade.feedback == null || grade.feedback.isEmpty())
-                ? "No specific feedback was provided yet."
-                : grade.feedback;
-
-        TextArea feedbackArea = new TextArea(feedbackText);
-        feedbackArea.setEditable(false);
-        feedbackArea.setWrapText(true);
-        feedbackArea.setPrefRowCount(8);
-
-        layout.getChildren().addAll(scoreHeader, scoreValue, new Label("Instructor Feedback:"), feedbackArea);
-        dialog.getDialogPane().setContent(layout);
-        dialog.showAndWait();
-    }
-
-    // ... (All existing Assignment bulk view logic methods remain here) ...
     private List<Course> loadEnrolledCoursesWithNames() {
         List<Course> courses = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
@@ -802,10 +951,6 @@ public class StudentDashboardController {
     }
 
 
-    // =========================================================================
-    // UTILITIES & DIALOGS (Existing Methods)
-    // =========================================================================
-
     private void showSubmissionDialog(int assignmentId) {
         Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Submit Assignment");
@@ -868,5 +1013,34 @@ public class StudentDashboardController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void showFeedbackDialog(StudentGrade grade) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Assignment Feedback");
+        dialog.setHeaderText(grade.getAssignmentTitle() + " in " + grade.getCourseName());
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
+
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(10));
+
+        Label scoreHeader = new Label("Final Score:");
+        scoreHeader.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
+
+        Label scoreValue = new Label(grade.getScoreDisplay());
+        scoreValue.setStyle("-fx-font-size: 20px; -fx-text-fill: " + (grade.score == null ? "#FFC300" : "#2ECC71") + "; -fx-font-weight: bold;");
+
+        String feedbackText = (grade.feedback == null || grade.feedback.isEmpty())
+                ? "No specific feedback was provided yet."
+                : grade.feedback;
+
+        TextArea feedbackArea = new TextArea(feedbackText);
+        feedbackArea.setEditable(false);
+        feedbackArea.setWrapText(true);
+        feedbackArea.setPrefRowCount(8);
+
+        layout.getChildren().addAll(scoreHeader, scoreValue, new Label("Instructor Feedback:"), feedbackArea);
+        dialog.getDialogPane().setContent(layout);
+        dialog.showAndWait();
     }
 }

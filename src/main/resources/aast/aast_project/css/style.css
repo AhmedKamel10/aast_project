@@ -1,0 +1,104 @@
+/* ================================
+   GLOBAL ROOT & BACKGROUND
+   ================================ */
+.root-pane {
+    -fx-background-color: linear-gradient(to bottom right, #1e1f29, #2d3040);
+    -fx-padding: 0;
+    -fx-font-family: "Segoe UI", sans-serif;
+}
+
+/* ================================
+   CARD CONTAINER
+   ================================ */
+.card {
+    -fx-background-color: #ffffff;
+    -fx-padding: 40 40 45 40;
+    -fx-background-radius: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 25, 0, 0, 8);
+}
+
+/* ================================
+   TITLES
+   ================================ */
+.title-text {
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #232323;
+}
+
+/* ================================
+   INPUT FIELDS
+   ================================ */
+.input-field {
+    -fx-pref-width: 300;
+    -fx-padding: 10 14;
+    -fx-background-radius: 8;
+    -fx-background-color: #f2f3f5;
+    -fx-border-color: transparent;
+    -fx-font-size: 14px;
+}
+
+.input-field:focused {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #4a7afe;
+    -fx-border-width: 1.4px;
+}
+
+/* ================================
+   LABELS
+   ================================ */
+.small-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #555;
+}
+
+/* ================================
+   BUTTONS
+   ================================ */
+.primary-btn {
+    -fx-padding: 10 25;
+    -fx-background-color: #4a7afe;
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.primary-btn:hover {
+    -fx-background-color: #3b65d3;
+}
+
+.secondary-btn {
+    -fx-padding: 10 25;
+    -fx-background-color: #dedede;
+    -fx-text-fill: #2d2d2d;
+    -fx-background-radius: 10;
+    -fx-font-size: 15px;
+    -fx-cursor: hand;
+}
+
+.secondary-btn:hover {
+    -fx-background-color: #cfcfcf;
+}
+
+/* ================================
+   MESSAGE LABEL
+   ================================ */
+.message-label {
+    -fx-font-size: 14px;
+    -fx-text-fill: #d9534f; /* Red for errors */
+    -fx-text-alignment: center;
+}
+
+/* ================================
+   CHOICE BOX
+   ================================ */
+.choice-box {
+    -fx-background-radius: 6;
+    -fx-padding: 6 8;
+}
+
+.choice-box .label {
+    -fx-font-size: 13px;
+}
