@@ -24,7 +24,7 @@ public class ViewManager {
 
     // --- DYNAMIC VIEWS (Accepts User ID) ---
     public static void showStudentDashboard(int userId) {
-        loadView("StudentDashboardView.fxml", "Student Dashboard", userId);
+        loadView("dashboard_student.fxml", "Student Dashboard", userId);
     }
 
     public static void showTeacherDashboard(int userId) {
@@ -59,8 +59,7 @@ public class ViewManager {
             if (controller instanceof TeacherDashboardController teacherController) {
                 teacherController.setInstructorId(userId);
             }
-            // Note: CourseManagerController is needed here because it's loaded from a MenuItem,
-            // not directly from the ViewManager navigation calls.
+
             else if (controller instanceof CourseManagerController courseManagerController) {
                 courseManagerController.setInstructorId(userId);
             }

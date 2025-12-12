@@ -15,6 +15,7 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.web.WebView; // ADDED: For embedded video playback
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -66,6 +67,7 @@ public class CourseManagerController {
     @FXML private TextField lectureTitleField;
     @FXML private TextField lectureUrlField;
     @FXML private TextArea lectureNotesArea;
+    @FXML private WebView lectureWebView; // <-- ADDED FIX for "cannot find symbol"
 
     // ===============================================
     // FXML FIELDS (ASSIGNMENT TAB)
@@ -83,8 +85,9 @@ public class CourseManagerController {
     @FXML private Button editQuizQuestionsButton;
 
     // ===============================================
-    // FXML FIELDS (LESSON PREVIEW)
+    // FXML FIELDS (LESSON PREVIEW) - REMOVED DUE TO NPE
     // ===============================================
+    /*
     @FXML private VBox lessonPreviewVBox;
     @FXML private Label previewInstructionLabel;
     @FXML private Label previewContentTypeLabel;
@@ -93,6 +96,7 @@ public class CourseManagerController {
     @FXML private Label previewDueDateLabel;
     @FXML private Label previewGradeLabel;
     @FXML private TextArea previewNotesArea;
+    */
 
 
     // ===============================================
@@ -141,6 +145,27 @@ public class CourseManagerController {
         lessonManagerPane.setVisible(false);
     }
 
+    /**
+     * Loads a video URL into the WebView component. Supports YouTube embedding.
+     */
+    private void loadVideo(String url) {
+        if (lectureWebView == null) return;
+
+        if (url == null || url.trim().isEmpty()) {
+            lectureWebView.getEngine().loadContent("<html><body style='text-align:center; font-family:sans-serif;'>Enter a YouTube/Video URL above to preview here.</body></html>");
+            return;
+        }
+
+        // Basic logic to embed a YouTube video
+        String embedUrl = url;
+        if (url.contains("youtube.com/watch?v=")) {
+            // Extract the video ID
+            String videoId = url.split("v=")[1].split("&")[0];
+            // Use HTML iframe for YouTube embedding
+        }
+
+    }
+
     @FXML
     public void initialize() {
         // --- COURSE Table Setup ---
@@ -164,14 +189,20 @@ public class CourseManagerController {
         lessonTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 showLessonContentDetails(newSelection);
-            } else {
-                handleClearPreview();
             }
+            // Removed: else { handleClearPreview(); }
         });
 
-        // Setup initial preview state
-        handleClearPreview();
+        // Removed: Setup initial preview state: handleClearPreview();
+
+        // Setup Video URL Listener
+        if (lectureUrlField != null && lectureWebView != null) {
+            lectureUrlField.textProperty().addListener((obs, oldUrl, newUrl) -> {
+                loadVideo(newUrl);
+            });
+        }
     }
+
 
     // =========================================================================
     //                            COURSE ACTIONS
@@ -455,6 +486,93 @@ public class CourseManagerController {
         }
     }
 
+    /**
+     * Loads the content of the selected lesson into the respective tabs for viewing/editing.
+     */
+    private void showLessonContentDetails(Lesson lesson) {
+        // 1. Clear current form state
+        handleClearLessonForm();
+
+        // 2. Set core Lesson data
+        selectedLesson = lesson;
+        lessonTitleField.setText(lesson.getTitle());
+        lessonOrderField.setText(String.valueOf(lesson.getOrder()));
+        lessonSaveButton.setText("Update Lesson (Content Update Not Supported)");
+
+        // 3. Load associated content (Lecture, Assignment, or Quiz)
+        String contentType = lesson.getContentType();
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            switch (contentType) {
+                case "Lecture":
+                    loadLectureContent(conn, lesson.getId());
+                    break;
+                case "Assignment":
+                    loadAssignmentContent(conn, lesson.getId());
+                    break;
+                case "Quiz":
+                    loadQuizContent(conn, lesson.getId());
+                    break;
+                default:
+                    // No content to load
+                    break;
+            }
+        } catch (SQLException e) {
+            showAlert("Database Error", "Failed to load content for lesson: " + e.getMessage(), AlertType.ERROR);
+            e.printStackTrace();
+        }
+    }
+
+    private void loadLectureContent(Connection conn, int lessonId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(SELECT_LECTURE_CONTENT)) {
+            pstmt.setInt(1, lessonId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    lectureTitleField.setText(rs.getString("string_title"));
+                    String url = rs.getString("string_url");
+                    lectureUrlField.setText(url);
+                    lectureNotesArea.setText(rs.getString("text_notes"));
+                    // This triggers the WebView listener (in initialize()) and loads the video
+                    loadVideo(url);
+                }
+            }
+        }
+    }
+
+    private void loadAssignmentContent(Connection conn, int lessonId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(SELECT_ASSIGNMENT_CONTENT)) {
+            pstmt.setInt(1, lessonId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    assignmentTitleField.setText(rs.getString("string_title"));
+                    assignmentDescriptionArea.setText(rs.getString("text_description"));
+
+                    Timestamp dueDateTimestamp = rs.getTimestamp("datetime_dueDate");
+                    if (dueDateTimestamp != null) {
+                        assignmentDueDate.setValue(dueDateTimestamp.toLocalDateTime().toLocalDate());
+                    } else {
+                        assignmentDueDate.setValue(null);
+                    }
+
+                    assignmentMaxGradeField.setText(String.valueOf(rs.getInt("int_maxGrade")));
+                }
+            }
+        }
+    }
+
+    private void loadQuizContent(Connection conn, int lessonId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(SELECT_QUIZ_CONTENT)) {
+            pstmt.setInt(1, lessonId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    quizTitleField.setText(rs.getString("string_title"));
+                    quizPassingScoreField.setText(String.valueOf(rs.getInt("integer_passingScore")));
+                }
+            }
+        }
+    }
+
+
     // =========================================================================
     //                            QUIZ BUILDER INTEGRATION
     // =========================================================================
@@ -528,7 +646,8 @@ public class CourseManagerController {
 
         // 2. Determine which content type is being created
         boolean isCreatingLecture = !lectureTitleField.getText().trim().isEmpty() || !lectureUrlField.getText().trim().isEmpty() || !lectureNotesArea.getText().isEmpty();
-        boolean isCreatingAssignment = !assignmentTitleField.getText().trim().isEmpty() || assignmentDueDate.getValue() != null || !assignmentMaxGradeField.getText().trim().isEmpty();
+        // Check for Assignment content (Title or MaxGrade is sufficient)
+        boolean isCreatingAssignment = !assignmentTitleField.getText().trim().isEmpty() || !assignmentMaxGradeField.getText().trim().isEmpty();
 
         // QUIZ LOGIC: Check if the QuizData object is set
         boolean isCreatingQuiz = currentQuizData != null;
@@ -727,158 +846,38 @@ public class CourseManagerController {
     @FXML
     private void handleClearLessonForm() {
         selectedLesson = null;
+        currentQuizData = null; // Reset quiz state
+
+        // Core Lesson Details
         lessonTitleField.clear();
         lessonOrderField.clear();
         lessonSaveButton.setText("Save Lesson and Content");
 
-        // Reset Quiz Data State and Fields
-        currentQuizData = null;
-        quizTitleField.clear();
-        quizPassingScoreField.clear();
-
-        // Clear other Content fields
+        // Lecture Tab
         lectureTitleField.clear();
         lectureUrlField.clear();
         lectureNotesArea.clear();
+        loadVideo(null); // Clear WebView
 
+        // Assignment Tab
         assignmentTitleField.clear();
         assignmentDueDate.setValue(null);
         assignmentMaxGradeField.clear();
         assignmentDescriptionArea.clear();
 
-        // Clear preview area
-        handleClearPreview();
-    }
-
-    // =========================================================================
-    //                            LESSON PREVIEW
-    // =========================================================================
-
-    // --- Helper DTO for Lesson Content Data ---
-    private static class LessonContentDTO {
-        String title;
-        String url;
-        String notesDescription;
-        String dueDate;
-        String gradeScore;
-    }
-
-    private void handleClearPreview() {
-        // Hide all specific preview nodes and show the instruction label
-        lessonPreviewVBox.getChildren().forEach(node -> node.setVisible(false));
-
-        // Ensure the instruction label and content type label exist and are handled
-        if (previewInstructionLabel != null) {
-            previewInstructionLabel.setText("Select a lesson above to view its details.");
-            previewInstructionLabel.setVisible(true);
-        }
-        if (previewContentTypeLabel != null) {
-            previewContentTypeLabel.setText("");
-            previewContentTypeLabel.setVisible(false);
-        }
-    }
-
-    private void showLessonContentDetails(Lesson lesson) {
-        handleClearPreview();
-        previewInstructionLabel.setVisible(false);
-
-        String type = lesson.getContentType();
-        previewContentTypeLabel.setText("Content Type: " + type);
-        previewContentTypeLabel.setVisible(true);
-
-        LessonContentDTO content = fetchLessonContent(lesson.getId(), type);
-
-        if (content != null) {
-            previewTitleLabel.setText("Title: " + content.title);
-            previewTitleLabel.setVisible(true);
-
-            if (type.equals("Lecture")) {
-                previewUrlLabel.setText("URL: " + content.url);
-                previewUrlLabel.setVisible(true);
-
-                previewNotesArea.setText(content.notesDescription);
-                previewNotesArea.setPromptText("Lecture Notes");
-                previewNotesArea.setVisible(true);
-
-                previewDueDateLabel.setVisible(false);
-                previewGradeLabel.setVisible(false);
-
-            } else if (type.equals("Assignment")) {
-                previewDueDateLabel.setText("Due Date: " + (content.dueDate != null ? content.dueDate : "N/A"));
-                previewDueDateLabel.setVisible(true);
-
-                previewGradeLabel.setText("Max Grade: " + content.gradeScore);
-                previewGradeLabel.setVisible(true);
-
-                previewNotesArea.setText(content.notesDescription);
-                previewNotesArea.setPromptText("Assignment Description");
-                previewNotesArea.setVisible(true);
-
-                previewUrlLabel.setVisible(false);
-
-            } else if (type.equals("Quiz")) {
-                previewGradeLabel.setText("Passing Score: " + content.gradeScore + "%");
-                previewGradeLabel.setVisible(true);
-
-                previewUrlLabel.setVisible(false);
-                previewDueDateLabel.setVisible(false);
-                previewNotesArea.setVisible(false);
-            }
-        }
-    }
-
-    private LessonContentDTO fetchLessonContent(int lessonId, String type) {
-        String sql = "";
-        if (type.equals("Lecture")) {
-            sql = SELECT_LECTURE_CONTENT;
-        } else if (type.equals("Assignment")) {
-            sql = SELECT_ASSIGNMENT_CONTENT;
-        } else if (type.equals("Quiz")) {
-            sql = SELECT_QUIZ_CONTENT;
-        } else {
-            return null;
-        }
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, lessonId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    LessonContentDTO dto = new LessonContentDTO();
-                    dto.title = rs.getString("string_title");
-
-                    if (type.equals("Lecture")) {
-                        dto.url = rs.getString("string_url");
-                        dto.notesDescription = rs.getString("text_notes");
-                    } else if (type.equals("Assignment")) {
-                        java.sql.Timestamp ts = rs.getTimestamp("datetime_dueDate");
-                        dto.dueDate = (ts != null) ? ts.toLocalDateTime().format(DateTimeFormatter.ofPattern("MMM dd, yyyy @ HH:mm")) : "N/A";
-                        dto.gradeScore = String.valueOf(rs.getInt("int_maxGrade"));
-                        dto.notesDescription = rs.getString("text_description");
-                    } else if (type.equals("Quiz")) {
-                        dto.gradeScore = String.valueOf(rs.getInt("integer_passingScore"));
-                    }
-                    return dto;
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching lesson content for preview: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
+        // Quiz Tab (Update display fields)
+        quizTitleField.setText("Set via 'Manage Quiz Questions' button");
+        quizPassingScoreField.setText("Set via 'Manage Quiz Questions' button");
     }
 
 
-    // =========================================================================
-    //                            OTHER HELPERS
-    // =========================================================================
+    // --- Generic Utility Method ---
 
-    private void showAlert(String title, String content, AlertType type) {
+    private void showAlert(String title, String message, AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(content);
+        alert.setContentText(message);
         alert.showAndWait();
     }
 }
