@@ -31,8 +31,6 @@
             <Button text="Grades" fx:id="gradesButton" onAction="#handleViewGrades"
                     style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
 
-            <Button text="Profile" fx:id="profileButton"
-                    style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
         </VBox>
     </left>
 

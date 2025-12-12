@@ -17,6 +17,18 @@ import javafx.scene.layout.VBox;
 import javafx.application.Platform;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
+import javafx.scene.web.WebView;
+import javafx.stage.Stage;
+import javafx.stage.Modality;
+import javafx.scene.Scene;
+import javafx.util.Duration;
+import javafx.scene.layout.StackPane;
+import javafx.scene.control.Slider;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.text.Font;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,6 +39,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class StudentDashboardController {
 
@@ -42,6 +56,17 @@ public class StudentDashboardController {
     // STATE
     // ===============================================
     private int studentId;
+
+    // ===============================================
+    // MEDIA PLAYER STATE
+    // ===============================================
+    private MediaPlayer mediaPlayer;
+    private static final Pattern YT_PATTERN = Pattern.compile(
+            "(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([\\w\\-]{11})"
+    );
+    private static final Pattern VIMEO_PATTERN = Pattern.compile(
+            "vimeo\\.com\\/(\\d+)"
+    );
 
     // ===============================================
     // DTO for Grade Display (UPDATED)
@@ -194,6 +219,239 @@ public class StudentDashboardController {
         }
     }
 
+    // =========================================================================
+    // MEDIA PLAYER METHODS
+    // =========================================================================
+
+    private boolean looksLikeDirectMediaUrl(String url) {
+        if (url == null) return false;
+        String u = url.toLowerCase();
+        return u.endsWith(".mp4") || u.endsWith(".m4v") || u.endsWith(".mov") || u.endsWith(".mkv")
+                || u.endsWith(".mp3") || u.endsWith(".aac") || u.endsWith(".wav")
+                || u.contains(".m3u8") || u.contains(".mpd");
+    }
+
+    private String extractYoutubeId(String url) {
+        if (url == null) return null;
+        Matcher m = YT_PATTERN.matcher(url);
+        return m.find() ? m.group(1) : null;
+    }
+
+    private String extractVimeoId(String url) {
+        if (url == null) return null;
+        Matcher m = VIMEO_PATTERN.matcher(url);
+        return m.find() ? m.group(1) : null;
+    }
+
+    private String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+    private String escapeHtmlAttribute(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+    }
+
+    private String buildEmbedHtml(String url) {
+        String ytId = extractYoutubeId(url);
+        if (ytId != null) {
+            String embedUrl = "https://www.youtube.com/embed/" + ytId;
+            String safeUrl = escapeHtmlAttribute(embedUrl);
+            return "<html>" +
+                    "<head>" +
+                    "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                    "<style>" +
+                    "html, body { margin:0; padding:0; height:100%; background:#111; }" +
+                    "iframe { border:0; width:100%; height:100%; }" +
+                    "</style>" +
+                    "</head>" +
+                    "<body>" +
+                    "<iframe src='" + safeUrl + "' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' allowfullscreen></iframe>" +
+                    "</body>" +
+                    "</html>";
+        }
+
+        String vimeoId = extractVimeoId(url);
+        if (vimeoId != null) {
+            String embedUrl = "https://player.vimeo.com/video/" + vimeoId;
+            String safeUrl = escapeHtmlAttribute(embedUrl);
+            return "<html>" +
+                    "<head>" +
+                    "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                    "<style>" +
+                    "html, body { margin:0; padding:0; height:100%; background:#111; }" +
+                    "iframe { border:0; width:100%; height:100%; }" +
+                    "</style>" +
+                    "</head>" +
+                    "<body>" +
+                    "<iframe src='" + safeUrl + "' allow='autoplay; fullscreen; picture-in-picture' allowfullscreen></iframe>" +
+                    "</body>" +
+                    "</html>";
+        }
+
+        // For non-embedded URLs, show a safe link
+        return "<html>" +
+                "<head>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<style>" +
+                "html, body { margin:0; padding:0; height:100%; background:#111; }" +
+                ".wrap { height:100%; display:flex; align-items:center; justify-content:center; }" +
+                "a { color:#4FC3F7; font-family:Arial, sans-serif; font-size:14px; }" +
+                "</style>" +
+                "</head>" +
+                "<body>" +
+                "<div class='wrap'>" +
+                "<a target='_blank' href='" + escapeHtml(url) + "'>Open this link</a>" +
+                "</div>" +
+                "</body>" +
+                "</html>";
+    }
+
+    private void showVideoPlayerDialog(String url, String title, String notes) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Lecture Video: " + title);
+        dialog.setHeaderText(null);
+
+        ButtonType closeButtonType = new ButtonType("Close", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(closeButtonType);
+
+        // Create video player container
+        VBox container = new VBox(10);
+        container.setPadding(new Insets(10));
+        container.setStyle("-fx-background-color: #111;");
+
+        // Video display area
+        StackPane videoPane = new StackPane();
+        videoPane.setPrefSize(800, 450);
+        videoPane.setStyle("-fx-background-color: #000;");
+
+        MediaView mediaView = new MediaView();
+        mediaView.setPreserveRatio(true);
+        mediaView.setFitWidth(800);
+        mediaView.setFitHeight(450);
+
+        WebView webView = new WebView();
+        webView.setPrefSize(800, 450);
+
+        // Controls
+        HBox controls = new HBox(10);
+        controls.setStyle("-fx-background-color: #222; -fx-padding: 10;");
+
+        Button playPauseButton = new Button("▶ Play");
+        Button stopButton = new Button("⏹ Stop");
+        Slider volumeSlider = new Slider(0, 1, 0.7);
+        volumeSlider.setPrefWidth(100);
+        Label volumeLabel = new Label("Volume:");
+
+        // Notes area
+        TextArea notesArea = new TextArea(notes);
+        notesArea.setEditable(false);
+        notesArea.setWrapText(true);
+        notesArea.setPrefRowCount(4);
+        notesArea.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 12px;");
+
+        // Add to video pane
+        videoPane.getChildren().addAll(mediaView, webView);
+
+        // Add to controls
+        controls.getChildren().addAll(playPauseButton, stopButton, volumeLabel, volumeSlider);
+
+        // Add to container
+        container.getChildren().addAll(videoPane, controls);
+
+        if (notes != null && !notes.trim().isEmpty() && !notes.equals("No notes available.")) {
+            Label notesLabel = new Label("Lecture Notes:");
+            notesLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: white; -fx-font-size: 14px;");
+            container.getChildren().addAll(notesLabel, notesArea);
+        }
+
+        dialog.getDialogPane().setContent(container);
+        dialog.getDialogPane().setPrefSize(850, 600);
+
+        // Set up media player
+        if (looksLikeDirectMediaUrl(url)) {
+            // Use MediaPlayer for direct media
+            webView.setVisible(false);
+            mediaView.setVisible(true);
+
+            try {
+                Media media = new Media(url);
+                mediaPlayer = new MediaPlayer(media);
+                mediaView.setMediaPlayer(mediaPlayer);
+
+                // Set initial volume
+                mediaPlayer.setVolume(volumeSlider.getValue());
+
+                // Control handlers
+                playPauseButton.setOnAction(e -> {
+                    if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
+                        mediaPlayer.pause();
+                        playPauseButton.setText("▶ Play");
+                    } else {
+                        mediaPlayer.play();
+                        playPauseButton.setText("⏸ Pause");
+                    }
+                });
+
+                stopButton.setOnAction(e -> {
+                    mediaPlayer.stop();
+                    playPauseButton.setText("▶ Play");
+                });
+
+                volumeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+                    mediaPlayer.setVolume(newVal.doubleValue());
+                });
+
+                // Auto-play
+                mediaPlayer.play();
+                playPauseButton.setText("⏸ Pause");
+
+            } catch (Exception e) {
+                // Fallback to WebView if MediaPlayer fails
+                webView.setVisible(true);
+                mediaView.setVisible(false);
+                webView.getEngine().loadContent(buildEmbedHtml(url));
+                playPauseButton.setDisable(true);
+                stopButton.setDisable(true);
+            }
+        } else {
+            // Use WebView for embedded content
+            webView.setVisible(true);
+            mediaView.setVisible(false);
+            webView.getEngine().loadContent(buildEmbedHtml(url));
+            playPauseButton.setDisable(true);
+            stopButton.setDisable(true);
+        }
+
+        // Clean up on close
+        dialog.setOnHidden(e -> {
+            if (mediaPlayer != null) {
+                mediaPlayer.stop();
+                mediaPlayer.dispose();
+                mediaPlayer = null;
+            }
+        });
+
+        Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
+        stage.setOnCloseRequest(e -> {
+            if (mediaPlayer != null) {
+                mediaPlayer.stop();
+                mediaPlayer.dispose();
+                mediaPlayer = null;
+            }
+        });
+
+        dialog.showAndWait();
+    }
 
     // =========================================================================
     // MENU HANDLERS
@@ -255,7 +513,6 @@ public class StudentDashboardController {
     private void handleViewGrades() {
         showCourseSummaryGrades();
     }
-
 
     // =========================================================================
     // GRADING LOGIC (UPDATED SECTION FOR SUMMARY/DETAIL VIEW)
@@ -483,10 +740,6 @@ public class StudentDashboardController {
         return row;
     }
 
-    // ... (All existing methods like createCourseRow, handleEnrollment,
-    // showLessonsForCourse, showSubmissionDialog, showAlert, etc., remain unchanged) ...
-
-
     private HBox createCourseRow(Course course, boolean isEnrolled) {
         Label nameLabel = new Label(course.getCourseIdString() + " - " + course.getCourseName());
         nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
@@ -661,7 +914,6 @@ public class StudentDashboardController {
                     pstmtCheckAssignment.setInt(1, lesson.getId());
                     try (ResultSet rsCheck = pstmtCheckAssignment.executeQuery()) {
                         if (rsCheck.next() && rsCheck.getInt(1) > 0) {
-
                             lesson.setContentType("Assignment");
                         } else {
                             lesson.setContentType("Lecture");
@@ -698,30 +950,37 @@ public class StudentDashboardController {
             return;
         }
 
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(15));
+        // Check if we have a valid URL for video playback
+        if (url != null && !url.trim().isEmpty() && !url.equals("No URL provided.")) {
+            // Show video player dialog instead of just showing the link
+            showVideoPlayerDialog(url, lesson.getTitle(), notes);
+        } else {
+            // Fallback to the old dialog for non-video content
+            VBox content = new VBox(10);
+            content.setPadding(new Insets(15));
 
-        Label urlLabel = new Label("Video/Resource URL:");
-        urlLabel.setStyle("-fx-font-weight: bold;");
-        Hyperlink urlLink = new Hyperlink(url);
+            Label urlLabel = new Label("Video/Resource URL:");
+            urlLabel.setStyle("-fx-font-weight: bold;");
+            Hyperlink urlLink = new Hyperlink(url);
 
-        Label notesHeader = new Label("Instructor Notes:");
-        notesHeader.setStyle("-fx-font-weight: bold; -fx-padding: 10 0 0 0;");
-        Label notesContent = new Label(notes);
-        notesContent.setWrapText(true);
+            Label notesHeader = new Label("Instructor Notes:");
+            notesHeader.setStyle("-fx-font-weight: bold; -fx-padding: 10 0 0 0;");
+            Label notesContent = new Label(notes);
+            notesContent.setWrapText(true);
 
-        content.getChildren().addAll(urlLabel, urlLink, notesHeader, notesContent);
+            content.getChildren().addAll(urlLabel, urlLink, notesHeader, notesContent);
 
-        Alert alert = new Alert(AlertType.INFORMATION);
-        alert.setTitle("Lecture Details");
-        alert.setHeaderText(lesson.getTitle() + " (" + lesson.getContentType() + ")");
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("Lecture Details");
+            alert.setHeaderText(lesson.getTitle() + " (" + lesson.getContentType() + ")");
 
-        DialogPane dialogPane = alert.getDialogPane();
-        dialogPane.setContent(content);
-        dialogPane.setPrefWidth(550);
-        dialogPane.setPrefHeight(450);
+            DialogPane dialogPane = alert.getDialogPane();
+            dialogPane.setContent(content);
+            dialogPane.setPrefWidth(550);
+            dialogPane.setPrefHeight(450);
 
-        alert.showAndWait();
+            alert.showAndWait();
+        }
     }
 
     private void showAssignmentDetails(Lesson lesson) {
@@ -949,7 +1208,6 @@ public class StudentDashboardController {
         pane.setStyle("-fx-background-color: #ECF0F1;");
         return pane;
     }
-
 
     private void showSubmissionDialog(int assignmentId) {
         Dialog<String> dialog = new Dialog<>();
