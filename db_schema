@@ -1,0 +1,174 @@
+-- SQL Schema Generation for aast_db
+-- Generated from MySQL information_schema.COLUMNS table data
+
+-- NOTE: Foreign key definitions are placed at the end to ensure tables are created in the correct order.
+
+-- ===================================
+-- DATABASE SETUP
+-- ===================================
+
+DROP DATABASE IF EXISTS `aast_db`;
+CREATE DATABASE `aast_db`;
+USE `aast_db`;
+
+-- ===================================
+-- USER AND INSTRUCTOR TABLES
+-- ===================================
+
+-- Table: User
+CREATE TABLE `User` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(255) NOT NULL UNIQUE,
+  `password` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(50) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: Instructor (Links to User)
+CREATE TABLE `Instructor` (
+  `user_id` INT NOT NULL,
+  `string_fName` VARCHAR(255) NULL,
+  `string_lName` VARCHAR(255) NULL,
+  PRIMARY KEY (`user_id`),
+  FOREIGN KEY (`user_id`) REFERENCES `User` (`id`) ON DELETE CASCADE -- Assumes Instructor is a specialized User role
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: Student (Links to User)
+CREATE TABLE `Student` (
+  `user_id` INT NOT NULL,
+  `string_level` VARCHAR(50) NULL,
+  `string_location` VARCHAR(255) NULL,
+  PRIMARY KEY (`user_id`),
+  FOREIGN KEY (`user_id`) REFERENCES `User` (`id`) ON DELETE CASCADE -- Assumes Student is a specialized User role
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ===================================
+-- COURSE AND LESSON STRUCTURE
+-- ===================================
+
+-- Table: Course
+CREATE TABLE `Course` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `string_id` VARCHAR(50) NOT NULL UNIQUE, -- The course code (e.g., CS101)
+  `string_courseName` VARCHAR(255) NOT NULL,
+  `string_description` TEXT NULL,
+  `float_globalGrade` DECIMAL(4,2) NULL, -- Assuming max 99.99 grade
+  `instructor_id` INT NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: Lesson
+CREATE TABLE `Lesson` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `string_title` VARCHAR(255) NOT NULL,
+  `course_id` INT NOT NULL,
+  `string_outline` TEXT NULL,
+  `int_order` INT NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ===================================
+-- LESSON CONTENT TABLES (1-to-1 with Lesson)
+-- ===================================
+
+-- Table: Lecture
+CREATE TABLE `Lecture` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `string_title` VARCHAR(255) NOT NULL,
+  `string_url` VARCHAR(512) NULL,
+  `text_notes` TEXT NULL,
+  `lesson_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_lecture_lesson` (`lesson_id`) -- Enforces 1-to-1 relationship with Lesson
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: Assignment
+CREATE TABLE `Assignment` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `string_title` VARCHAR(255) NOT NULL,
+  `text_description` TEXT NULL,
+  `datetime_dueDate` DATETIME NULL,
+  `int_maxGrade` INT NULL,
+  `lesson_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_assignment_lesson` (`lesson_id`) -- Enforces 1-to-1 relationship with Lesson
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: Quiz
+CREATE TABLE `Quiz` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `string_title` VARCHAR(255) NOT NULL,
+  `integer_passingScore` INT NULL,
+  `lesson_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_quiz_lesson` (`lesson_id`) -- Enforces 1-to-1 relationship with Lesson
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: Question (Many-to-1 with Quiz)
+CREATE TABLE `Question` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `string_questionText` TEXT NULL,
+  `string_optionA` VARCHAR(512) NULL,
+  `string_optionB` VARCHAR(512) NULL,
+  `string_optionC` VARCHAR(512) NULL,
+  `string_optionD` VARCHAR(512) NULL,
+  `char_correctAnswer` CHAR(1) NULL,
+  `quiz_id` INT NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ===================================
+-- ENROLLMENT AND GRADING TABLES
+-- ===================================
+
+-- Table: Enrollment (Junction table for Student and Course)
+CREATE TABLE `Enrollment` (
+  `student_id` INT NOT NULL,
+  `course_id` INT NOT NULL,
+  `date_enrollmentDate` DATE NULL,
+  `date_withdrawalDate` DATE NULL,
+  `float_progressPercentage` DECIMAL(5,2) NULL, -- Assuming max 999.99 for percent, though usually 100.00
+  PRIMARY KEY (`student_id`, `course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: Submission (Student submission for an Assignment)
+CREATE TABLE `Submission` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `student_id` INT NOT NULL,
+  `assignment_id` INT NOT NULL,
+  `datetime_submissionDate` DATETIME NULL,
+  `float_score` DECIMAL(5,2) NULL,
+  `string_feedback` TEXT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_submission_assignment_student` (`student_id`, `assignment_id`) -- Ensures one submission per student per assignment
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ===================================
+-- FOREIGN KEY CONSTRAINTS (Defined last)
+-- ===================================
+
+ALTER TABLE `Course`
+  ADD CONSTRAINT `fk_course_instructor` FOREIGN KEY (`instructor_id`) REFERENCES `Instructor` (`user_id`) ON DELETE CASCADE;
+
+ALTER TABLE `Lesson`
+  ADD CONSTRAINT `fk_lesson_course` FOREIGN KEY (`course_id`) REFERENCES `Course` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `Lecture`
+  ADD CONSTRAINT `fk_lecture_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `Lesson` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `Assignment`
+  ADD CONSTRAINT `fk_assignment_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `Lesson` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `Quiz`
+  ADD CONSTRAINT `fk_quiz_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `Lesson` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `Question`
+  ADD CONSTRAINT `fk_question_quiz` FOREIGN KEY (`quiz_id`) REFERENCES `Quiz` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `Enrollment`
+  ADD CONSTRAINT `fk_enrollment_student` FOREIGN KEY (`student_id`) REFERENCES `Student` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_enrollment_course` FOREIGN KEY (`course_id`) REFERENCES `Course` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `Submission`
+  ADD CONSTRAINT `fk_submission_student` FOREIGN KEY (`student_id`) REFERENCES `Student` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_submission_assignment` FOREIGN KEY (`assignment_id`) REFERENCES `Assignment` (`id`) ON DELETE CASCADE;
