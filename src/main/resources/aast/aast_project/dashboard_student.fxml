@@ -28,7 +28,7 @@
             <Button text="Assignments" fx:id="assignmentsButton"
                     style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
 
-            <Button text="Grades" fx:id="gradesButton"
+            <Button text="Grades" fx:id="gradesButton" onAction="#handleViewGrades"
                     style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-pref-width: 150;"/>
 
             <Button text="Profile" fx:id="profileButton"
@@ -38,11 +38,9 @@
 
     <!-- 🔹 Main Content Area -->
     <center>
-        <VBox spacing="15" alignment="TOP_CENTER" style="-fx-padding: 20;">
+        <VBox fx:id="centerVBox" spacing="15" alignment="TOP_CENTER" style="-fx-padding: 20;">
             <Label text="Welcome, Student!" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-
-            <TextArea fx:id="infoArea" prefHeight="400" prefWidth="500"
-                      promptText="Your courses, assignments, and announcements will appear here..."/>
+            <Label text="Select an option from the left to view content."/>
         </VBox>
     </center>
 

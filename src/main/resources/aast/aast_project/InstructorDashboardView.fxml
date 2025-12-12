@@ -2,9 +2,12 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
-<?import javafx.geometry.Insets?> <BorderPane xmlns:fx="http://javafx.com/fxml"
-                                              fx:controller="aast.aast_project.controllers.TeacherDashboardController"
-                                              prefHeight="600.0" prefWidth="800.0">
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="aast.aast_project.controllers.TeacherDashboardController"
+            prefHeight="600.0" prefWidth="800.0">
+
     <top>
         <MenuBar BorderPane.alignment="CENTER">
             <menus>
@@ -29,7 +32,7 @@
     </top>
 
     <center>
-        <VBox alignment="CENTER" spacing="20.0">
+        <VBox fx:id="centerVBox" alignment="TOP_CENTER" spacing="20.0">
             <Label text="Instructor Dashboard" style="-fx-font-size: 24pt; -fx-font-weight: bold;"/>
             <Text fx:id="welcomeText" text="Welcome, Instructor! Select an option from the menu."/>
         </VBox>

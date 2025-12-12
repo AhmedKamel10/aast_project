@@ -1,6 +1,7 @@
 package aast.aast_project.app;
 
 import aast.aast_project.controllers.CourseManagerController;
+import aast.aast_project.controllers.StudentDashboardController; // <--- NEW: Import the Student Controller
 import aast.aast_project.controllers.TeacherDashboardController;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -24,11 +25,12 @@ public class ViewManager {
 
     // --- DYNAMIC VIEWS (Accepts User ID) ---
     public static void showStudentDashboard(int userId) {
+        // Assuming your FXML file is named dashboard_student.fxml
         loadView("dashboard_student.fxml", "Student Dashboard", userId);
     }
 
     public static void showTeacherDashboard(int userId) {
-        loadView("TeacherDashboardView.fxml", "Instructor Dashboard", userId);
+        loadView("InstructorDashboardView.fxml", "Instructor Dashboard", userId);
     }
 
     public static void showCourseManager(int instructorId) {
@@ -40,7 +42,7 @@ public class ViewManager {
      * Overload to load a view without passing a user ID (e.g., for Login).
      */
     private static void loadView(String fxmlFileName, String title) {
-        loadView(fxmlFileName, title, 0); // Pass a default ID
+        loadView(fxmlFileName, title, 0); // Pass a default ID (0)
     }
 
     /**
@@ -56,17 +58,15 @@ public class ViewManager {
             // --- INJECT THE USER ID INTO THE CONTROLLER ---
             Object controller = loader.getController();
 
-            if (controller instanceof TeacherDashboardController teacherController) {
+            if (controller instanceof StudentDashboardController studentController) { // <--- FIXED: Student check added first
+                studentController.setStudentId(userId);
+            }
+            else if (controller instanceof TeacherDashboardController teacherController) {
                 teacherController.setInstructorId(userId);
             }
-
             else if (controller instanceof CourseManagerController courseManagerController) {
                 courseManagerController.setInstructorId(userId);
             }
-            // You would add StudentDashboardController here when you implement it
-            // else if (controller instanceof StudentDashboardController studentController) {
-            //     studentController.setStudentId(userId);
-            // }
             // ------------------------------------------------
 
             Scene scene = new Scene(root);
