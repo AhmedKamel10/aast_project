@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import java.time.LocalDate?>
+
+<SplitPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="aast.aast_project.controllers.CourseManagerController"
+           dividerPositions="0.55" prefHeight="750.0" prefWidth="1400.0">
+
+    <VBox spacing="10.0" alignment="TOP_CENTER">
+        <padding>
+            <Insets top="20.0" right="10.0" bottom="20.0" left="20.0" />
+        </padding>
+
+        <Label text="Manage Courses" style="-fx-font-size: 20pt; -fx-font-weight: bold;"/>
+
+        <TableView fx:id="courseTable" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="idColumn" text="ID" prefWidth="50.0"/>
+                <TableColumn fx:id="courseIdStringColumn" text="Code" prefWidth="80.0"/>
+                <TableColumn fx:id="nameColumn" text="Name" prefWidth="150.0"/>
+                <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="150.0"/>
+                <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="150.0"/>
+            </columns>
+        </TableView>
+
+        <GridPane hgap="10" vgap="10" alignment="CENTER">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="20"/>
+                <ColumnConstraints percentWidth="80"/>
+            </columnConstraints>
+
+            <Label text="Course Code:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <TextField fx:id="courseIdStringField" promptText="e.g., CS101" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+            <Label text="Course Name:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <TextField fx:id="courseNameField" promptText="e.g., Introduction to Programming" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+            <Label text="Description:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <TextArea fx:id="descriptionArea" prefRowCount="3" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="3" GridPane.columnIndex="1">
+                <Button fx:id="saveButton" text="Save Course" onAction="#handleSaveCourse"/>
+                <Button fx:id="clearButton" text="Clear Form" onAction="#handleClearForm"/>
+                <Button fx:id="backButton" text="&lt; Back to Dashboard" onAction="#handleBackToDashboard"/>
+            </HBox>
+        </GridPane>
+    </VBox>
+
+
+    <VBox fx:id="lessonManagerPane" spacing="10.0" alignment="TOP_CENTER" visible="false">
+        <padding>
+            <Insets top="20.0" right="20.0" bottom="20.0" left="10.0" />
+        </padding>
+
+        <Label fx:id="lessonHeaderLabel" text="Lessons" style="-fx-font-size: 16pt; -fx-font-weight: bold;"/>
+
+        <TableView fx:id="lessonTable" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="lessonIdColumn" text="ID" prefWidth="40.0"/>
+                <TableColumn fx:id="lessonOrderColumn" text="Order" prefWidth="60.0"/>
+                <TableColumn fx:id="lessonTitleColumn" text="Title" prefWidth="150.0"/>
+                <TableColumn fx:id="lessonContentColumn" text="Type" prefWidth="180.0"/>
+                <TableColumn fx:id="lessonActionsColumn" text="Actions" prefWidth="100.0"/>
+            </columns>
+        </TableView>
+
+        <TitledPane text="Selected Lesson Content Preview" collapsible="true" expanded="false" maxWidth="1.7976931348623157E308">
+            <VBox fx:id="lessonPreviewVBox" spacing="5.0">
+                <padding>
+                    <Insets top="10.0" right="10.0" bottom="10.0" left="10.0" />
+                </padding>
+                <Label text="Select a lesson above to view its details." fx:id="previewInstructionLabel" style="-fx-font-style: italic;"/>
+
+                <Label fx:id="previewContentTypeLabel" style="-fx-font-weight: bold; -fx-text-fill: #1976D2;"/>
+                <Label fx:id="previewTitleLabel" wrapText="true"/>
+                <Label fx:id="previewUrlLabel" wrapText="true" style="-fx-text-fill: #4CAF50;"/>
+                <Label fx:id="previewDueDateLabel"/>
+                <Label fx:id="previewGradeLabel"/>
+                <TextArea fx:id="previewNotesArea" editable="false" prefRowCount="3" promptText="Detailed notes/description will appear here."/>
+            </VBox>
+        </TitledPane>
+
+
+        <TitledPane text="Create / Edit Lesson Core Details" collapsible="true" expanded="true" maxWidth="1.7976931348623157E308">
+            <GridPane hgap="10" vgap="10">
+                <padding>
+                    <Insets top="10.0" right="10.0" bottom="10.0" left="10.0" />
+                </padding>
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="25"/>
+                    <ColumnConstraints percentWidth="75"/>
+                </columnConstraints>
+
+                <Label text="Title:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="lessonTitleField" promptText="e.g., Chapter 1 Introduction" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                <Label text="Order (Seq):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <TextField fx:id="lessonOrderField" promptText="e.g., 1" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            </GridPane>
+        </TitledPane>
+
+
+        <TabPane prefHeight="250.0" tabClosingPolicy="UNAVAILABLE">
+
+            <Tab text="Lecture (Video/Notes)">
+                <content>
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10.0" right="10.0" bottom="10.0" left="10.0" />
+                        </padding>
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="25"/>
+                            <ColumnConstraints percentWidth="75"/>
+                        </columnConstraints>
+
+                        <Label text="Lecture Title:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="lectureTitleField" promptText="e.g., Welcome Video" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <Label text="Video/File URL:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <TextField fx:id="lectureUrlField" promptText="e.g., https://youtube.com/..." GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Notes/Text Content:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <TextArea fx:id="lectureNotesArea" prefRowCount="3" promptText="Detailed notes or text content..." GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                    </GridPane>
+                </content>
+            </Tab>
+
+            <Tab text="Assignment">
+                <content>
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10.0" right="10.0" bottom="10.0" left="10.0" />
+                        </padding>
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="25"/>
+                            <ColumnConstraints percentWidth="75"/>
+                        </columnConstraints>
+
+                        <Label text="Assignment Title:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="assignmentTitleField" promptText="e.g., Final Project Submission" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <Label text="Due Date:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <DatePicker fx:id="assignmentDueDate" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Max Grade:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <TextField fx:id="assignmentMaxGradeField" promptText="e.g., 100" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                        <Label text="Description:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <TextArea fx:id="assignmentDescriptionArea" prefRowCount="3" promptText="Task description..." GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                    </GridPane>
+                </content>
+            </Tab>
+
+            <Tab text="Quiz">
+                <VBox spacing="10.0">
+                    <padding>
+                        <Insets top="10.0" right="10.0" bottom="10.0" left="10.0" />
+                    </padding>
+
+                    <TitledPane text="Quiz Setup" collapsible="false" maxWidth="1.7976931348623157E308">
+                        <GridPane hgap="10" vgap="10">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="25"/>
+                                <ColumnConstraints percentWidth="75"/>
+                            </columnConstraints>
+
+                            <Label text="Quiz Title:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="quizTitleField" promptText="Set via 'Edit Questions' button" editable="false" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                            <Label text="Passing Score (%):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextField fx:id="quizPassingScoreField" promptText="Set via 'Edit Questions' button" editable="false" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <Button fx:id="editQuizQuestionsButton" text="Create / Edit Quiz Questions (Launches Pop-up)" onAction="#handleEditQuizQuestions" maxWidth="1.7976931348623157E308"/>
+
+                    <Label text="Note: Click the button above to define questions. Title and Score will update here upon finalizing."
+                           wrapText="true" style="-fx-font-style: italic; -fx-font-size: 10pt;"/>
+                </VBox>
+            </Tab>
+        </TabPane>
+
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="0" right="10" bottom="0" left="0" />
+            </padding>
+            <Button fx:id="lessonSaveButton" text="Save Lesson and Content" onAction="#handleSaveLesson"/>
+            <Button text="Clear Lesson Form" onAction="#handleClearLessonForm"/>
+        </HBox>
+
+    </VBox>
+</SplitPane>

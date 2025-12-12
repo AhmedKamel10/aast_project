@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<?import javafx.geometry.Insets?> <BorderPane xmlns:fx="http://javafx.com/fxml"
+                                              fx:controller="aast.aast_project.controllers.TeacherDashboardController"
+                                              prefHeight="600.0" prefWidth="800.0">
+    <top>
+        <MenuBar BorderPane.alignment="CENTER">
+            <menus>
+                <Menu text="Courses">
+                    <items>
+                        <MenuItem text="Manage Courses" onAction="#handleManageCourses"/>
+                        <MenuItem text="View Enrollments" onAction="#handleViewEnrollments"/>
+                    </items>
+                </Menu>
+                <Menu text="Assignments">
+                    <items>
+                        <MenuItem text="Grade Submissions" onAction="#handleGradeSubmissions"/>
+                    </items>
+                </Menu>
+                <Menu text="Account">
+                    <items>
+                        <MenuItem text="Logout" onAction="#handleLogout"/>
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </top>
+
+    <center>
+        <VBox alignment="CENTER" spacing="20.0">
+            <Label text="Instructor Dashboard" style="-fx-font-size: 24pt; -fx-font-weight: bold;"/>
+            <Text fx:id="welcomeText" text="Welcome, Instructor! Select an option from the menu."/>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT">
+            <padding>
+                <Insets top="10.0" right="10.0" bottom="10.0" left="10.0" />
+            </padding>
+            <Label text="Status: Ready"/>
+        </HBox>
+    </bottom>
+</BorderPane>

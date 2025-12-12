@@ -4,20 +4,29 @@
 <?import javafx.scene.layout.*?>
 
 <?import java.lang.String?>
-<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="aast.aast_project.controller.LoginController">
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="aast.aast_project.controller.LoginController" styleClass="background-pane">
     <stylesheets>
         <String fx:value="/com/specter/elearning/css/style.css"/>
     </stylesheets>
     <children>
-        <VBox spacing="12.0" alignment="CENTER" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0" AnchorPane.topAnchor="50" AnchorPane.bottomAnchor="50" styleClass="pane">
+        <VBox spacing="15.0" alignment="CENTER" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0" AnchorPane.topAnchor="50" AnchorPane.bottomAnchor="50" styleClass="content-pane">
             <Label text="E-Learning" styleClass="title"/>
+
             <TextField fx:id="usernameField" promptText="Username" maxWidth="300"/>
             <PasswordField fx:id="passwordField" promptText="Password" maxWidth="300"/>
-            <HBox spacing="10" alignment="CENTER">
-                <Button fx:id="loginButton" text="Login"/>
-                <Button fx:id="registerButton" text="Register"/>
+
+            <HBox spacing="10" alignment="CENTER" maxWidth="300">
+                <Label text="Register as:"/>
+                <ChoiceBox fx:id="roleChoiceBox" prefWidth="150">
+                </ChoiceBox>
             </HBox>
-            <Label fx:id="messageLabel" textFill="red"/>
+
+            <HBox spacing="20" alignment="CENTER">
+                <Button fx:id="loginButton" text="Login" styleClass="primary-button"/>
+                <Button fx:id="registerButton" text="Register" styleClass="secondary-button"/>
+            </HBox>
+
+            <Label fx:id="messageLabel" wrapText="true" styleClass="message-label"/>
         </VBox>
     </children>
 </AnchorPane>

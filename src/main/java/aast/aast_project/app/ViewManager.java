@@ -1,57 +1,84 @@
 package aast.aast_project.app;
 
-import aast.aast_project.HelloApplication;
+import aast.aast_project.controllers.CourseManagerController;
+import aast.aast_project.controllers.TeacherDashboardController;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+
 import java.io.IOException;
-import java.net.URL;
 
 public class ViewManager {
+
     private static Stage primaryStage;
 
     public static void setPrimaryStage(Stage stage) {
         primaryStage = stage;
     }
 
-    private static void loadAndShowScene(String fxmlPath, String title) {
-        try {
-            // Path relative to the resources folder (e.g., /aast/aast_project/views/DashboardView.fxml)
-            URL fxmlUrl = ViewManager.class.getResource(fxmlPath);
-            if (fxmlUrl == null) {
-                System.err.println("Error: FXML file not found at path: " + fxmlPath);
-                return;
-            }
+    // --- NON-DYNAMIC VIEWS (Login) ---
+    public static void showLogin() {
+        loadView("LoginView.fxml", "E-Learning Login");
+    }
 
-            FXMLLoader fxmlLoader = new FXMLLoader(fxmlUrl);
-            Scene scene = new Scene(fxmlLoader.load(), 800, 600); // Standard dashboard size
+    // --- DYNAMIC VIEWS (Accepts User ID) ---
+    public static void showStudentDashboard(int userId) {
+        loadView("StudentDashboardView.fxml", "Student Dashboard", userId);
+    }
+
+    public static void showTeacherDashboard(int userId) {
+        loadView("TeacherDashboardView.fxml", "Instructor Dashboard", userId);
+    }
+
+    public static void showCourseManager(int instructorId) {
+        loadView("CourseManagerView.fxml", "Manage Courses", instructorId);
+    }
+    // ----------------------------------------
+
+    /**
+     * Overload to load a view without passing a user ID (e.g., for Login).
+     */
+    private static void loadView(String fxmlFileName, String title) {
+        loadView(fxmlFileName, title, 0); // Pass a default ID
+    }
+
+    /**
+     * Core method to load a view, pass the user ID, and set the stage.
+     */
+    private static void loadView(String fxmlFileName, String title, int userId) {
+        try {
+            String resourcePath = "/aast/aast_project/" + fxmlFileName;
+            FXMLLoader loader = new FXMLLoader(ViewManager.class.getResource(resourcePath));
+
+            Parent root = loader.load();
+
+            // --- INJECT THE USER ID INTO THE CONTROLLER ---
+            Object controller = loader.getController();
+
+            if (controller instanceof TeacherDashboardController teacherController) {
+                teacherController.setInstructorId(userId);
+            }
+            // Note: CourseManagerController is needed here because it's loaded from a MenuItem,
+            // not directly from the ViewManager navigation calls.
+            else if (controller instanceof CourseManagerController courseManagerController) {
+                courseManagerController.setInstructorId(userId);
+            }
+            // You would add StudentDashboardController here when you implement it
+            // else if (controller instanceof StudentDashboardController studentController) {
+            //     studentController.setStudentId(userId);
+            // }
+            // ------------------------------------------------
+
+            Scene scene = new Scene(root);
 
             primaryStage.setTitle(title);
             primaryStage.setScene(scene);
-            primaryStage.centerOnScreen();
+            primaryStage.show();
 
         } catch (IOException e) {
+            System.err.println("Error: FXML file not found at path: /aast/aast_project/" + fxmlFileName);
             e.printStackTrace();
-            System.err.println("Failed to load FXML: " + fxmlPath);
         }
     }
-
-    // --- Public Navigation Methods ---
-
-    public static void showLogin() {
-        // Assuming LoginView.fxml is in /aast/aast_project/LoginView.fxml (as per your structure)
-        loadAndShowScene("/aast/aast_project/LoginView.fxml", "E-Learning Login");
-    }
-
-    public static void showTeacherDashboard() {
-        // NOTE: You must create this FXML file later (e.g., TeacherDashboardView.fxml)
-        loadAndShowScene("/aast/aast_project/TeacherDashboardView.fxml", "Teacher Dashboard");
-    }
-
-    public static void showStudentDashboard() {
-        // NOTE: You must create this FXML file later (e.g., StudentDashboardView.fxml)
-        loadAndShowScene("/aast/aast_project/dashboard_student.fxml", "Student Dashboard");
-    }
-
-    // You can add more navigation methods here (e.g., showAdminView)
 }
